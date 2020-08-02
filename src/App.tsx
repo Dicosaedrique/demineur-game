@@ -1,45 +1,37 @@
 import React from "react";
+import { BrowserRouter as Router, Route, Link } from "react-router-dom";
 
-import logo from "./images/logo.svg";
 import "./styles/App.css";
 
+import Game from "src/model/Game";
+
+import GameComponent from "src/components/GameComponent";
+
 interface State {
-    ready: boolean;
+    start: boolean;
 }
 
-export default class App extends React.Component<any, State> {
-    constructor(props: any) {
-        super(props);
+import { WEBGL } from "src/scripts/WebGlChecker";
 
-        this.state = {
-            ready: true,
-        };
-    }
+const WEBGL_AVAILABLE = WEBGL.isWebGLAvailable();
 
-    render(): JSX.Element {
-        const { ready } = this.state;
-
-        if (ready) {
-            return (
-                <div className="App">
-                    <header className="App-header">
-                        <img src={logo} className="App-logo" alt="logo" />
-                        <p>
-                            Edit <code>src/App.js</code> and save to reload.
-                        </p>
-                        <a
-                            className="App-link"
-                            href="https://reactjs.org"
-                            target="_blank"
-                            rel="noreferrer"
-                        >
-                            Learn React from
-                        </a>
-                    </header>
-                </div>
-            );
-        } else {
-            return null;
-        }
+export default function (): JSX.Element {
+    if (WEBGL_AVAILABLE) {
+        return (
+            <Router>
+                <Route path="/">
+                    <GameComponent />
+                </Route>
+            </Router>
+        );
+    } else {
+        return (
+            <p>
+                WebGL n'est pas disponible sur votre navigateur ! Veuillez
+                réessayer sur un navigateur plus récent ! WebGL est utilisé pour
+                faire le rendu du jeu de démineur et est donc nécéssaire pour
+                fonctionner !
+            </p>
+        );
     }
 }

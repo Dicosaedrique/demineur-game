@@ -130,6 +130,7 @@ module.exports = (env, argv) => {
         },
         ...dev({
             devServer: {
+                historyApiFallback: true,
                 port: 3000,
                 open: true,
                 overlay: {
