@@ -2,13 +2,24 @@
 
 Reste à faire :
 
-Polish : - effet de pulse sur la grille
+Polish :
 
-HUD in game : - chronomètre en haut de l'écran - nombre de flag restant (ne décrémente pas en dessous de 0)
+-   effet de pulse sur la grille
 
-Victoire / Défaite : - lumière qui tourne autour du plateau de la couleur - 5 sec après (+/-) on affiche le menu de départ et reset le jeu avec un message adapté
+HUD in game :
 
-Menu de départ et d'options (overlay grisant la fenêtre) : - Texte de victoire ou de défaite (ne s'affiche qu'après une partie) - Bouton jouer - Button group à trois choix "facile, moye, difficile" pour la difffiulté
-=> change en live le terrain (en le regénérant)
-=> opt : pouvoir créer un preset et le sauvegarder - Terrain affiché en fond avec caméra qui tourne autour - choix des couleurs parmis un panel de couleurs préchoisies
-=> s'update au hover et reste au clique
+-   chronomètre en haut de l'écran
+-   nombre de flag restant (ne décrémente pas en dessous de 0)
+-   mute + home en haut à droite
+
+Menu de départ et d'options (overlay grisant la fenêtre) :
+
+-   Bouton jouer
+-   choix des couleurs parmis un panel de couleurs préchoisies
+    => s'update au hover et reste au clique
+-   options de son (mute + niveau de soundtrack et fx)
+
+Crédits :
+
+-   fx start game menu : https://opengameart.org/content/7-space-sounds (Joth - 7 Space Sounds)
+-   fx et musique de fond : https://soundimage.org/attribution-info/

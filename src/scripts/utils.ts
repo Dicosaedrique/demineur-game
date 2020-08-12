@@ -52,3 +52,20 @@ export function requestFullScreen(): void {
 export function isFullScreen(): boolean {
     return (screen.availHeight || screen.height - 30) <= window.innerHeight;
 }
+
+export function cloneOject(obj: Obj): Obj {
+    const clone: Obj = {};
+    for (const key in obj)
+        clone[key] =
+            typeof obj[key] === "object" ? cloneOject(obj[key]) : obj[key];
+
+    return clone;
+}
+
+export function isUndef(value: any): boolean {
+    return value === void 0;
+}
+
+export function isNotUndef(value: any): boolean {
+    return value !== void 0;
+}
