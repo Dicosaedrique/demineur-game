@@ -1,4 +1,7 @@
-import { Game, Cell } from "src/model";
+import Game, { GAME_STATE } from "src/model/Game";
+import Cell, { RENDER_STATE } from "src/model/Cell";
+
+import { toRadian, toDegree } from "src/scripts/utils";
 
 import {
     Scene,
@@ -7,7 +10,6 @@ import {
     AmbientLight,
     Raycaster,
     Vector2,
-    AxesHelper,
     Object3D,
     InstancedMesh,
     BoxGeometry,
@@ -17,12 +19,11 @@ import {
     Matrix4,
     Color,
     PointLight,
-    Vector3,
 } from "three";
 
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import Stats from "three/examples/jsm/libs/stats.module.js";
-import { CELL_SIZE, CELL_SPACING } from "src/scripts/constants";
+
+import { CELL_SIZE, CELL_SPACING, CONTROLS_TYPE } from "src/scripts/constants";
 
 import textureFace0 from "src/images/face_0.png";
 import textureFace1 from "src/images/face_1.png";
@@ -38,7 +39,7 @@ import textureDoubt from "src/images/doubt.png";
 import textureSide from "src/images/side.png";
 import textureMine from "src/images/mine.png";
 import textureHidden from "src/images/hidden.png";
-import { RENDER_STATE } from "./Cell";
+import textureHiddenSide from "src/images/hidden_side.png";
 
 type CubeMaterials = {
     [state: string]: MeshPhongMaterial[];
@@ -73,6 +74,7 @@ const TEXTURES: TexturesCatalog = {
     doubt: TEXTURE_LOADER.load(textureDoubt),
     mine: TEXTURE_LOADER.load(textureMine),
     hidden: TEXTURE_LOADER.load(textureHidden),
+    hiddenSide: TEXTURE_LOADER.load(textureHiddenSide),
 };
 
 const MATERIALS: MaterialsCatalog = ((): MaterialsCatalog => {
@@ -103,12 +105,12 @@ const CUBE_MATERIALS: CubeMaterials = {
         MATERIALS["face_6"],
     ],
     HIDDEN: [
+        MATERIALS["hiddenSide"],
+        MATERIALS["hiddenSide"],
         MATERIALS["hidden"],
         MATERIALS["hidden"],
-        MATERIALS["hidden"],
-        MATERIALS["hidden"],
-        MATERIALS["hidden"],
-        MATERIALS["hidden"],
+        MATERIALS["hiddenSide"],
+        MATERIALS["hiddenSide"],
     ],
     FLAG: [
         MATERIALS["side"],
@@ -221,7 +223,7 @@ const GENERATE_INSTANCE_MESHES = (count: number): InstancedMeshCatalog => {
     return instancedMeshes;
 };
 
-function setColor(color: number): void {
+function setMaterialsColor(color: number): void {
     const newColor = new Color(color);
     for (const matKey in MATERIALS) {
         MATERIALS[matKey].color = newColor;
@@ -230,11 +232,9 @@ function setColor(color: number): void {
 
 const instanceMatrix = new Matrix4();
 
-const STATS = Stats();
-
 export default class GameRenderer {
     private renderer: WebGLRenderer;
-    private raycaster: Raycaster = new Raycaster();
+    private raycaster: Raycaster;
     private camera: PerspectiveCamera;
     private scene: Scene;
     private game: Game;
@@ -246,7 +246,7 @@ export default class GameRenderer {
     private lastControlsAngle?: number = 0;
     private instancedMeshes: InstancedMeshCatalog;
     private rendering = false;
-    private boardIsNew = false;
+    private renderColor = 0x54c8ff;
 
     constructor(game: Game) {
         this.game = game;
@@ -265,7 +265,8 @@ export default class GameRenderer {
         this.renderer = new WebGLRenderer({
             antialias: true,
         });
-        console.log(window.innerWidth, window.innerHeight);
+
+        this.raycaster = new Raycaster();
 
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         this.renderer.setPixelRatio(window.devicePixelRatio);
@@ -274,10 +275,13 @@ export default class GameRenderer {
         this.initScene();
         this.initControls();
 
-        document.body.appendChild(STATS.dom); // dev
-
         this.requestAnimate();
     }
+
+    setColor = (color: number): void => {
+        this.renderColor = color;
+        setMaterialsColor(color);
+    };
 
     private initScene = (): void => {
         this.scene = new Scene();
@@ -286,7 +290,6 @@ export default class GameRenderer {
 
         this.scene.add(this.board);
         this.scene.add(this.camera);
-        this.scene.add(new AxesHelper(5)); // dev
 
         this.ambiantLight = new AmbientLight(0x404040, 1);
         this.scene.add(this.ambiantLight);
@@ -297,17 +300,15 @@ export default class GameRenderer {
             this.camera,
             this.renderer.domElement
         );
+
         this.controls.target.set(0, 0, 0);
         this.controls.enableDamping = true;
         this.controls.dampingFactor = 0.1;
-        this.controls.minPolarAngle = Math.PI * (45 / 180);
-        this.controls.maxPolarAngle = Math.PI * (45 / 180);
-        this.controls.enablePan = false;
         this.controls.enableKeys = false;
         this.controls.minDistance = 4 * CELL_SIZE * (1 + CELL_SPACING);
-        this.controls.enableRotate = false;
-        this.controls.enableZoom = false;
-        this.controls.autoRotate = true;
+        this.controls.enableRotate = true;
+        this.controls.enableZoom = true;
+        this.controls.enablePan = true;
     };
 
     private initListenner = (): void => {
@@ -331,11 +332,11 @@ export default class GameRenderer {
             true
         );
 
-        this.game.on("statechange", ({ newState }): void => {
-            if (newState === Game.GAME_STATE.VICTORY) this.win();
-            else if (newState === Game.GAME_STATE.DEFEAT) this.lose();
-            else if (newState === Game.GAME_STATE.READY) this.start();
-            else if (newState === Game.GAME_STATE.MENU) this.menu();
+        this.game.on("statechange", ({ data: { newState } }): void => {
+            if (newState === GAME_STATE.VICTORY) this.win();
+            else if (newState === GAME_STATE.DEFEAT) this.lose();
+            else if (newState === GAME_STATE.READY) this.start();
+            else if (newState === GAME_STATE.MENU) this.menu();
         });
     };
 
@@ -345,31 +346,25 @@ export default class GameRenderer {
         this.scene.add(this.board);
 
         const offset = new Vector2(
-            this.game.getBoard().getWidth() * CELL_SIZE * (1 + CELL_SPACING),
-            this.game.getBoard().getHeight() * CELL_SIZE * (1 + CELL_SPACING)
+            this.game.getBoard().getConfig().getWidth() *
+                CELL_SIZE *
+                (1 + CELL_SPACING),
+            this.game.getBoard().getConfig().getHeight() *
+                CELL_SIZE *
+                (1 + CELL_SPACING)
         );
 
         this.board.position.set(-offset.x / 2, 0, -offset.y / 2);
 
-        const maxDistance =
-            Math.max(
-                this.game.getBoard().getHeight(),
-                this.game.getBoard().getWidth()
-            ) *
-            CELL_SIZE *
-            (1 + CELL_SPACING);
-
-        this.controls.maxDistance = maxDistance * 1.2;
+        this.controls.maxDistance = this.computeMaxDistanceCamera();
 
         this.updateBoard();
     };
 
     updateBoard = (): void => {
-        console.log("UPDATE BOARD");
-
         this.board.remove(...this.board.children);
         this.instancedMeshes = GENERATE_INSTANCE_MESHES(
-            this.game.getBoard().getSize()
+            this.game.getBoard().getConfig().getSize()
         );
 
         const transform = new Object3D();
@@ -377,32 +372,33 @@ export default class GameRenderer {
         this.game
             .getBoard()
             .getCells()
-            .forEach((cell, index): void => {
+            .forEach((cell): void => {
                 transform.rotation.set(
                     0,
-                    (this.lastControlsAngle * Math.PI) / 180 || 0,
+                    toRadian(this.lastControlsAngle) || 0,
                     0
                 );
+
+                const cellPos = this.game
+                    .getBoard()
+                    .indiceToPos(cell.getIndice());
+
                 transform.position.set(
-                    CELL_SIZE / 2 +
-                        cell.getPos().x * CELL_SIZE * (1 + CELL_SPACING),
+                    CELL_SIZE / 2 + cellPos.x * CELL_SIZE * (1 + CELL_SPACING),
                     0,
-                    CELL_SIZE / 2 +
-                        cell.getPos().y * CELL_SIZE * (1 + CELL_SPACING)
+                    CELL_SIZE / 2 + cellPos.y * CELL_SIZE * (1 + CELL_SPACING)
                 );
 
                 transform.updateMatrix();
 
                 this.instancedMeshes[cell.getState()].setMatrixAt(
-                    index,
+                    cell.getIndice(),
                     transform.matrix
                 );
             });
 
         for (const key in this.instancedMeshes)
             this.board.add(this.instancedMeshes[key]);
-
-        this.boardIsNew = true;
     };
 
     handleMouse = (evt: MouseEvent): void => {
@@ -429,11 +425,13 @@ export default class GameRenderer {
             if (this.lastCellOn !== beforeLastCell) {
                 if (this.lastCellOn !== -1) {
                     const cell = this.game.getBoard().getCell(this.lastCellOn);
-                    if (cell.getState() === RENDER_STATE.HIDDEN)
+                    if (cell.getState() === RENDER_STATE.HIDDEN) {
                         this.applyMatrixToCell(
                             cell,
                             new Matrix4().makeTranslation(0, -CELL_SIZE / 10, 0)
                         );
+                        this.game.getSoundManager().hover();
+                    }
                 }
 
                 if (beforeLastCell !== -1) {
@@ -453,22 +451,27 @@ export default class GameRenderer {
                 this.lastCellDown !== -1 &&
                 this.lastCellOn !== -1
             ) {
-                const cell = this.game.getBoard().getCell(this.lastCellDown);
-                const cellsUpdated = this.game.click(cell, evt.button);
+                const cellsUpdated = this.game.click(
+                    this.lastCellDown,
+                    evt.button
+                );
 
                 if (cellsUpdated.length > 0) this.updateBoard();
-
-                this.lastCellOn = -1;
-                this.lastCellDown = -1;
             }
         }
     };
 
     private applyMatrixToCell = (cell: Cell, matrix: Matrix4): void => {
         const state = cell.getState();
-        this.instancedMeshes[state].getMatrixAt(cell.getId(), instanceMatrix);
+        this.instancedMeshes[state].getMatrixAt(
+            cell.getIndice(),
+            instanceMatrix
+        );
         instanceMatrix.multiply(matrix);
-        this.instancedMeshes[state].setMatrixAt(cell.getId(), instanceMatrix);
+        this.instancedMeshes[state].setMatrixAt(
+            cell.getIndice(),
+            instanceMatrix
+        );
         this.instancedMeshes[state].instanceMatrix.needsUpdate = true;
     };
 
@@ -484,7 +487,7 @@ export default class GameRenderer {
     };
 
     private renderBoard = (): void => {
-        let angle = (this.controls.getAzimuthalAngle() * 180) / Math.PI;
+        let angle = toDegree(this.controls.getAzimuthalAngle());
 
         if (angle < 45 && angle > -45) angle = 0;
         else if (angle > 45 && angle < 135) angle = 90;
@@ -493,20 +496,22 @@ export default class GameRenderer {
 
         if (this.lastControlsAngle !== angle) {
             const rotateMatrix = new Matrix4().makeRotationY(
-                ((angle - this.lastControlsAngle) * Math.PI) / 180
+                toRadian(angle - this.lastControlsAngle)
             );
             this.game
                 .getBoard()
                 .getCells()
-                .forEach((_, idx): void => {
-                    const state = this.game.getBoard().getCell(idx).getState();
+                .forEach((cell): void => {
+                    const state = cell.getState();
+                    const indice = cell.getIndice();
+
                     this.instancedMeshes[state].getMatrixAt(
-                        idx,
+                        indice,
                         instanceMatrix
                     );
                     instanceMatrix.multiply(rotateMatrix);
                     this.instancedMeshes[state].setMatrixAt(
-                        idx,
+                        indice,
                         instanceMatrix
                     );
                     this.instancedMeshes[
@@ -521,8 +526,6 @@ export default class GameRenderer {
     };
 
     private render = (): void => {
-        STATS.update();
-
         this.controls.update();
         this.renderBoard();
         this.renderer.render(this.scene, this.camera);
@@ -541,32 +544,53 @@ export default class GameRenderer {
         }
     };
 
-    private menu = (): void => {
-        this.controls.minPolarAngle = Math.PI * (45 / 180);
-        this.controls.maxPolarAngle = Math.PI * (45 / 180);
-        this.controls.enableRotate = false;
-        this.controls.enableZoom = false;
-        this.controls.autoRotate = true;
+    private computeMaxDistanceCamera(): number {
+        return (
+            Math.max(
+                this.game.getBoard().getConfig().getHeight(),
+                this.game.getBoard().getConfig().getWidth()
+            ) *
+            CELL_SIZE *
+            (1 + CELL_SPACING)
+        );
+    }
 
+    resetContols = (): void => {
+        this.controls.target.set(0, 0, 0);
+        this.camera.position.set(0, this.camera.position.y, 0);
+
+        if (this.game.getControls() === CONTROLS_TYPE.SPHERE) {
+            this.controls.mouseButtons = { LEFT: 0, MIDDLE: 1, RIGHT: 2 };
+            this.controls.enableRotate = true;
+            this.controls.enablePan = false;
+        } else {
+            this.controls.mouseButtons = { LEFT: 2, MIDDLE: 1, RIGHT: 0 };
+            this.controls.enableRotate = false;
+            this.controls.enablePan = true;
+        }
+    };
+
+    private menu = (): void => {
+        this.camera.position.set(0, this.computeMaxDistanceCamera() * 0.5, 0);
+
+        this.controls.target.set(0, 0, 0);
+        this.controls.minPolarAngle = toRadian(45);
+        this.controls.maxPolarAngle = toRadian(45);
+        this.controls.autoRotate = true;
+        this.controls.enabled = false;
+
+        setMaterialsColor(this.renderColor);
         this.initBoard();
-        setColor(0x0000ff); // temp
     };
 
     private start = (): void => {
-        const maxDistance =
-            Math.max(
-                this.game.getBoard().getHeight(),
-                this.game.getBoard().getWidth()
-            ) *
-            CELL_SIZE *
-            (1 + CELL_SPACING);
-        this.camera.position.y = maxDistance;
+        this.resetContols();
 
-        this.controls.enableRotate = true;
-        this.controls.enableZoom = true;
+        this.camera.position.set(0, this.computeMaxDistanceCamera(), 0);
+        this.controls.enabled = true;
         this.controls.autoRotate = false;
+        this.controls.maxPolarAngle = toRadian(70);
         this.controls.minPolarAngle = 0;
-        this.controls.maxPolarAngle = Math.PI * (60 / 180);
     };
 
     private win = (): void => {
@@ -575,9 +599,9 @@ export default class GameRenderer {
             .getCells()
             .forEach((cell): void => cell.reveal());
         this.updateBoard();
-        setColor(0x00ff00);
+        setMaterialsColor(0x00ff00);
         setTimeout(this.game.menu, 5000);
-        console.log("on a gagné !");
+        this.game.getSoundManager().win();
     };
 
     private lose = (): void => {
@@ -586,8 +610,8 @@ export default class GameRenderer {
             .getCells()
             .forEach((cell): void => cell.reveal());
         this.updateBoard();
-        setColor(0xff0000);
+        setMaterialsColor(0xff0000);
         setTimeout(this.game.menu, 5000);
-        console.log("on a perdu !");
+        this.game.getSoundManager().lose();
     };
 }

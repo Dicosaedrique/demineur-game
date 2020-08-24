@@ -104,7 +104,7 @@ module.exports = (env, argv) => {
                     loader: "ts-loader",
                 },
                 {
-                    test: /\.(png|jpe?g|gif|svg|mp3)$/i,
+                    test: /\.(png|jpe?g|gif|svg|mp3|cur)$/i,
                     loader: "file-loader",
                     options: {
                         name: resolve(
@@ -131,6 +131,7 @@ module.exports = (env, argv) => {
         ...dev({
             devServer: {
                 historyApiFallback: true,
+                contentBase: path.join(__dirname, 'public'),
                 port: 3000,
                 open: true,
                 overlay: {

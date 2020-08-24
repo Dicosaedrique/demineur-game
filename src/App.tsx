@@ -1,35 +1,26 @@
 import React from "react";
-import { BrowserRouter as Router, Route } from "react-router-dom";
 
-import "./styles/App.css";
+import ThemeManager from "src/components/ThemeManager";
+import GamePage from "src/pages/GamePage";
 
-import GameComponent from "src/components/GameComponent";
+import "src/styles/App.css";
+
+import SettingsManager from "src/model/SettingsManager";
+import { COLOR_PRESETS } from "src/scripts/constants";
 
 interface State {
     start: boolean;
 }
 
-import { WEBGL } from "src/scripts/WebGlChecker";
-
-const WEBGL_AVAILABLE = WEBGL.isWebGLAvailable();
-
-export default function (): JSX.Element {
-    if (WEBGL_AVAILABLE) {
-        return (
-            <Router>
-                <Route path="/">
-                    <GameComponent />
-                </Route>
-            </Router>
-        );
-    } else {
-        return (
-            <p>
-                WebGL n'est pas disponible sur votre navigateur ! Veuillez
-                réessayer sur un navigateur plus récent ! WebGL est utilisé pour
-                faire le rendu du jeu de démineur et est donc nécéssaire pour
-                fonctionner !
-            </p>
-        );
-    }
+export default function App(): JSX.Element {
+    return (
+        <ThemeManager
+            defaultThemeColor={
+                COLOR_PRESETS[SettingsManager.getInstance().getColorPreset()]
+                    .hexa
+            }
+        >
+            <GamePage />
+        </ThemeManager>
+    );
 }

@@ -1,5 +1,5 @@
 import { rangedInterval, randomInArray } from "src/scripts/utils";
-import { Cell } from "src/model";
+import Cell from "src/model/Cell";
 
 import {
     MIN_MINE_DENSITY,
@@ -8,18 +8,26 @@ import {
     DEFAULT_HEIGHT,
     DEFAULT_MINE_DENSITY,
 } from "src/scripts/constants";
-import { log } from "three";
+
+enum ARROUND {
+    TOP_LEFT = 0,
+    TOP = 1,
+    TOP_RIGHT = 2,
+    LEFT = 3,
+    RIGHT = 4,
+    BOTTOM_LEFT = 5,
+    BOTTOM = 6,
+    BOTTOM_RIGHT = 7,
+}
 
 function getMineDensity(mineDensity: number): number {
     return rangedInterval(mineDensity, MIN_MINE_DENSITY, MAX_MINE_DENSITY);
 }
 
-export default class Board {
-    private cells: Cell[];
+export class BoardConfig {
     private width: number;
     private height: number;
     private mineDensity: number;
-    private mineCount: number;
 
     constructor(
         width: number = DEFAULT_WIDTH,
@@ -29,40 +37,71 @@ export default class Board {
         this.width = width;
         this.height = height;
         this.mineDensity = getMineDensity(mineDensity);
-
-        this.generateBlankBoard();
     }
 
     getWidth = (): number => this.width;
     getHeight = (): number => this.height;
     getMineDensity = (): number => this.mineDensity;
+
+    getSize = (): number => this.width * this.height;
+}
+
+export default class Board {
+    private cells: Cell[];
+    private config: BoardConfig;
+    private mineCount: number;
+
+    constructor(config: BoardConfig, autoInit = false, cellIndice?: number) {
+        this.mineCount = 0;
+
+        this.setConfig(config, autoInit, cellIndice);
+    }
+
+    // GETTERS
+
+    getConfig = (): BoardConfig => this.config;
+    getCells = (): Cell[] => this.cells;
+    getCell = (idx: number): Cell => this.cells[idx];
     getMineCount = (): number => this.mineCount;
 
-    reset = (): void => {
-        this.cells.forEach((cell): void => {
-            cell.reset();
-        });
+    // SETTERS
+
+    setConfig = (
+        config: BoardConfig,
+        autoInit = false,
+        cellIndice?: number
+    ): void => {
+        this.config = config;
+        this.generate(autoInit, cellIndice);
     };
 
-    private generateBlankBoard = (): void => {
-        this.cells = Array(this.getSize());
+    // METHODS
 
-        for (let idx = 0; idx < this.cells.length; idx++) {
-            this.cells[idx] = new Cell(idx, this.indexToPos(idx), this);
+    private generate = (autoInit = false, cellIndice?: number): void => {
+        this.cells = Array.from(
+            Array(this.config.getSize()),
+            (_, indice) => new Cell(indice)
+        );
+
+        if (autoInit === true) {
+            this.init(cellIndice);
         }
     };
 
-    init = (cell?: Cell): number[] => {
+    init = (cellIndice?: number): number[] => {
         this.reset();
 
-        let boardIndices = Array.from(Array(this.getSize()), (_, idx) => idx);
+        let boardIndices = Array.from(
+            Array(this.config.getSize()),
+            (_, idx) => idx
+        );
 
-        if (cell) {
-            boardIndices[cell.getId()] = -1;
+        if (this.isCell(cellIndice)) {
+            boardIndices[cellIndice] = -1;
 
-            for (const arroundCell of cell.getCellsArround()) {
-                if (arroundCell) {
-                    boardIndices[arroundCell.getId()] = -1;
+            for (const cellArroundIndice of this.getCellsArround(cellIndice)) {
+                if (cellArroundIndice !== null) {
+                    boardIndices[cellArroundIndice] = -1;
                 }
             }
 
@@ -71,79 +110,151 @@ export default class Board {
             );
         }
 
-        this.mineCount = Math.floor(
-            (this.mineDensity / 100) * (this.getSize() - 9)
+        this.mineCount = Math.round(
+            (this.config.getMineDensity() / 100) * (this.config.getSize() - 9)
         );
 
         for (let i = 0; i < this.mineCount; i++) {
             const randomIndice = randomInArray(boardIndices, true);
 
-            this.cells[randomIndice].setMine();
+            if (this.isCell(randomIndice)) {
+                this.getCell(randomIndice).setMine();
 
-            const arround = this.cells[randomIndice].getCellsArround();
-
-            for (const arroundCell of arround) {
-                if (
-                    arroundCell &&
-                    arroundCell.getValue() !== Cell.CELL_VALUES.MINE
-                )
-                    arroundCell.setValue(arroundCell.getValue() + 1);
+                for (const cellArroundIndice of this.getCellsArround(
+                    randomIndice
+                )) {
+                    if (this.isCell(cellArroundIndice)) {
+                        if (!this.getCell(cellArroundIndice).isMine()) {
+                            this.getCell(cellArroundIndice).setValue(
+                                this.getCell(cellArroundIndice).getValue() + 1
+                            );
+                        }
+                    }
+                }
             }
         }
 
-        if (cell) {
-            return this.reveal(cell);
+        if (this.isCell(cellIndice)) {
+            return this.reveal(cellIndice);
         }
 
         return [];
     };
 
-    reveal = (cell: Cell): number[] => {
+    private getCellsArround = (cellIndice: number): number[] => {
+        const indices: number[] = Array.from(Array(8), () => null);
+        const cellPos = this.indiceToPos(cellIndice);
+
+        if (cellPos !== null) {
+            indices[ARROUND.TOP_LEFT] = this.posToIndice({
+                x: cellPos.x - 1,
+                y: cellPos.y - 1,
+            });
+
+            indices[ARROUND.TOP] = this.posToIndice({
+                x: cellPos.x,
+                y: cellPos.y - 1,
+            });
+
+            indices[ARROUND.TOP_RIGHT] = this.posToIndice({
+                x: cellPos.x + 1,
+                y: cellPos.y - 1,
+            });
+
+            indices[ARROUND.LEFT] = this.posToIndice({
+                x: cellPos.x - 1,
+                y: cellPos.y,
+            });
+
+            indices[ARROUND.RIGHT] = this.posToIndice({
+                x: cellPos.x + 1,
+                y: cellPos.y,
+            });
+
+            indices[ARROUND.BOTTOM_LEFT] = this.posToIndice({
+                x: cellPos.x - 1,
+                y: cellPos.y + 1,
+            });
+
+            indices[ARROUND.BOTTOM] = this.posToIndice({
+                x: cellPos.x,
+                y: cellPos.y + 1,
+            });
+
+            indices[ARROUND.BOTTOM_RIGHT] = this.posToIndice({
+                x: cellPos.x + 1,
+                y: cellPos.y + 1,
+            });
+        }
+
+        return indices;
+    };
+
+    reveal = (cellIndice: number): number[] => {
+        return this.isCell(cellIndice)
+            ? this.cellsRevealWorker(cellIndice, [])
+            : [];
+    };
+
+    private cellsRevealWorker = (
+        currentCellIndice: number,
+        computedCells: number[]
+    ): number[] => {
         const revealedCells: number[] = [];
-        function cellRevealWorker(currenCell: Cell, cellsDone: Cell[]): void {
-            if (cellsDone.includes(currenCell)) return;
 
-            if (currenCell.isHidden()) {
-                currenCell.reveal();
-                revealedCells.push(currenCell.getId());
-            }
+        if (computedCells.includes(currentCellIndice)) return revealedCells;
 
-            cellsDone.push(currenCell);
+        if (this.getCell(currentCellIndice).isHidden()) {
+            this.getCell(currentCellIndice).reveal();
+            revealedCells.push(currentCellIndice);
+        }
 
-            if (currenCell.getValue() === Cell.CELL_VALUES.BLANK) {
-                const arround = currenCell.getCellsArround();
-                for (const cellAround of arround) {
-                    if (cellAround) cellRevealWorker(cellAround, cellsDone);
+        computedCells.push(currentCellIndice);
+
+        if (this.getCell(currentCellIndice).isBlank()) {
+            for (const cellAroundIndice of this.getCellsArround(
+                currentCellIndice
+            )) {
+                if (this.isCell(cellAroundIndice)) {
+                    revealedCells.push(
+                        ...this.cellsRevealWorker(
+                            cellAroundIndice,
+                            computedCells
+                        )
+                    );
                 }
             }
         }
 
-        cellRevealWorker(cell, []);
-
         return revealedCells;
     };
 
-    posToIndex = (pos: Vector2D): number => {
-        if (
-            pos.x >= this.width ||
-            pos.x < 0 ||
-            pos.y >= this.height ||
-            pos.y < 0
-        )
-            return -1;
-        else return pos.y * this.width + pos.x;
+    reset = (): void => {
+        this.cells.forEach((cell): void => {
+            cell.reset();
+        });
     };
 
-    indexToPos = (indice: number): Vector2D => {
+    posToIndice = (pos: Vector2D): number | null => {
+        if (
+            pos.x >= this.config.getWidth() ||
+            pos.x < 0 ||
+            pos.y >= this.config.getHeight() ||
+            pos.y < 0
+        )
+            return null;
+        else return pos.y * this.config.getWidth() + pos.x;
+    };
+
+    indiceToPos = (cellIndice: number): Vector2D | null => {
+        if (!this.isCell(cellIndice)) return null;
+
         return {
-            x: indice % this.width,
-            y: Math.floor(indice / this.width),
+            x: cellIndice % this.config.getWidth(),
+            y: Math.floor(cellIndice / this.config.getWidth()),
         };
     };
 
-    getCells = (): Cell[] => this.cells;
-
-    getSize = (): number => this.width * this.height;
-
-    getCell = (idx: number): Cell => this.cells[idx] || null;
+    isCell = (cellIndice: number): boolean =>
+        this.cells[cellIndice] instanceof Cell;
 }

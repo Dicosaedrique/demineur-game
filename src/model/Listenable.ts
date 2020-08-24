@@ -1,11 +1,12 @@
-type Event = {
+type MyEvent = {
     type: string;
-    [prop: string]: any;
+    target?: any;
+    data: Obj;
 };
 
-type ListennerCallback = (event: any) => void;
+export type ListennerCallback = (event: any) => void;
 
-type ListennerSupressor = () => void;
+export type ListennerSupressor = () => void;
 
 interface Listenners {
     [eventName: string]: ListennerCallback[];
@@ -51,7 +52,7 @@ export default class Listenable {
     };
 
     // you can put in parameters a single event or plurial events
-    emmitEvent = (...events: Event[]): void => {
+    emmitEvent = (...events: MyEvent[]): void => {
         for (const event of events) {
             if (event.type !== null && event.type in this.listeners) {
                 event.target = this;
