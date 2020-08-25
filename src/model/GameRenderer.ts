@@ -302,7 +302,6 @@ export default class GameRenderer {
         );
 
         this.controls.target.set(0, 0, 0);
-        this.controls.enableDamping = true;
         this.controls.dampingFactor = 0.1;
         this.controls.enableKeys = false;
         this.controls.minDistance = 4 * CELL_SIZE * (1 + CELL_SPACING);
@@ -521,8 +520,6 @@ export default class GameRenderer {
 
             this.lastControlsAngle = angle;
         }
-
-        return;
     };
 
     private render = (): void => {
@@ -563,7 +560,7 @@ export default class GameRenderer {
             this.controls.mouseButtons = { LEFT: 0, MIDDLE: 1, RIGHT: 2 };
             this.controls.enableRotate = true;
             this.controls.enablePan = false;
-        } else {
+        } else if (this.game.getControls() === CONTROLS_TYPE.PANNING) {
             this.controls.mouseButtons = { LEFT: 2, MIDDLE: 1, RIGHT: 0 };
             this.controls.enableRotate = false;
             this.controls.enablePan = true;
@@ -578,6 +575,7 @@ export default class GameRenderer {
         this.controls.maxPolarAngle = toRadian(45);
         this.controls.autoRotate = true;
         this.controls.enabled = false;
+        this.controls.enableDamping = false;
 
         setMaterialsColor(this.renderColor);
         this.initBoard();
@@ -586,6 +584,7 @@ export default class GameRenderer {
     private start = (): void => {
         this.resetContols();
 
+        this.controls.enableDamping = true;
         this.camera.position.set(0, this.computeMaxDistanceCamera(), 0);
         this.controls.enabled = true;
         this.controls.autoRotate = false;

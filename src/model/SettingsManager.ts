@@ -135,6 +135,11 @@ export default class SettingsManager {
             localStorage.getItem(SettingsManager.STORAGE_KEY)
         );
 
+        if (!savedState) {
+            this.save();
+            return;
+        }
+
         const {
             soundTrackVolume,
             fxsVolume,
@@ -147,49 +152,56 @@ export default class SettingsManager {
             scores,
         } = savedState;
 
-        if (soundTrackVolume && typeof soundTrackVolume === "number")
-            this.setSoundTrackVolume(soundTrackVolume);
+        if (
+            isNotUndef(soundTrackVolume) &&
+            typeof soundTrackVolume === "number"
+        )
+            this.soundTrackVolume = soundTrackVolume;
 
-        if (fxsVolume && typeof fxsVolume === "number")
-            this.setFxsVolume(fxsVolume);
+        if (isNotUndef(fxsVolume) && typeof fxsVolume === "number")
+            this.fxsVolume = fxsVolume;
 
-        if (globalMute && typeof globalMute === "boolean")
-            this.setGlobalMute(globalMute);
+        if (isNotUndef(globalMute) && typeof globalMute === "boolean")
+            this.globalMute = globalMute;
 
-        if (globalVolume && typeof globalVolume === "number")
-            this.setGlobalVolume(globalVolume);
+        if (isNotUndef(globalVolume) && typeof globalVolume === "number")
+            this.globalVolume = globalVolume;
 
         if (
-            colorPreset &&
+            isNotUndef(colorPreset) &&
             typeof colorPreset === "number" &&
             colorPreset in GAME_COLOR
         )
-            this.setColorPreset(colorPreset);
+            this.colorPreset = colorPreset;
 
         if (
-            difficulty &&
+            isNotUndef(difficulty) &&
             typeof difficulty === "number" &&
             difficulty in GAME_DIFFICULTY
         )
-            this.setDifficulty(difficulty);
+            this.difficulty = difficulty;
 
         if (
-            userPreset &&
+            isNotUndef(userPreset) &&
             typeof userPreset === "object" &&
             "width" in userPreset &&
             "height" in userPreset &&
             "mineDensity" in userPreset
         )
-            this.setUserPreset(userPreset);
+            this.userPreset = userPreset;
 
         if (
-            controls &&
+            isNotUndef(controls) &&
             typeof controls === "number" &&
             controls in CONTROLS_TYPE
         )
-            this.setControls(controls);
+            this.controls = controls;
 
-        if (scores && typeof scores === "object" && scores instanceof Array) {
+        if (
+            isNotUndef(scores) &&
+            typeof scores === "object" &&
+            scores instanceof Array
+        ) {
             for (const score of scores) {
                 if (
                     isNotUndef(score.name) &&

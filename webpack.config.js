@@ -131,7 +131,7 @@ module.exports = (env, argv) => {
         ...dev({
             devServer: {
                 historyApiFallback: true,
-                contentBase: path.join(__dirname, 'public'),
+                contentBase: path.join(__dirname, "public"),
                 port: 3000,
                 open: true,
                 overlay: {

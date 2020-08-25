@@ -11,10 +11,6 @@ import { WEBGL } from "src/scripts/WebGlChecker";
 
 import { ListennerSupressor } from "src/model/Listenable";
 
-import CustomCursor from "src/ressources/cursor.cur";
-
-console.log(CustomCursor);
-
 interface State {
     gameState: GAME_STATE;
 }
