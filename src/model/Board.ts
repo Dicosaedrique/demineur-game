@@ -4,6 +4,7 @@ import Cell from "src/model/Cell";
 import {
     MIN_MINE_DENSITY,
     MAX_MINE_DENSITY,
+    MAX_BOARD_SIZE,
     DEFAULT_WIDTH,
     DEFAULT_HEIGHT,
     DEFAULT_MINE_DENSITY,
@@ -39,11 +40,11 @@ export class BoardConfig {
         this.mineDensity = getMineDensity(mineDensity);
     }
 
-    getWidth = (): number => this.width;
-    getHeight = (): number => this.height;
+    getWidth = (): number => Math.min(this.width, MAX_BOARD_SIZE);
+    getHeight = (): number => Math.min(this.height, MAX_BOARD_SIZE);
     getMineDensity = (): number => this.mineDensity;
 
-    getSize = (): number => this.width * this.height;
+    getSize = (): number => this.getWidth() * this.getHeight();
 }
 
 export default class Board {
@@ -215,7 +216,11 @@ export default class Board {
             for (const cellAroundIndice of this.getCellsArround(
                 currentCellIndice
             )) {
-                if (this.isCell(cellAroundIndice)) {
+                if (
+                    this.isCell(cellAroundIndice) &&
+                    !this.getCell(cellAroundIndice).isFlag() &&
+                    !this.getCell(cellAroundIndice).isDoubt()
+                ) {
                     revealedCells.push(
                         ...this.cellsRevealWorker(
                             cellAroundIndice,

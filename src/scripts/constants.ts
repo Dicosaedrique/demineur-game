@@ -10,6 +10,8 @@ export const MIN_MINE_DENSITY = 8;
 export const MAX_MINE_DENSITY = 25;
 export const DEFAULT_MINE_DENSITY = 18;
 
+export const MAX_BOARD_SIZE = 100;
+
 export enum CONTROLS_TYPE {
     PANNING,
     SPHERE,

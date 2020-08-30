@@ -231,9 +231,9 @@ export default class SettingsManager {
         fxsVolume: 1.0,
         globalMute: false,
         globalVolume: 1.0,
-        colorPreset: GAME_COLOR.BLEU,
+        colorPreset: GAME_COLOR.ORANGE,
         difficulty: GAME_DIFFICULTY.EASY,
-        controls: CONTROLS_TYPE.SPHERE,
+        controls: CONTROLS_TYPE.PANNING,
         userPreset: {
             width: 10,
             height: 10,

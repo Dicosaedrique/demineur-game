@@ -68,8 +68,16 @@ export function isBrowserInFullscreen(): boolean {
 export function createPrimaryTheme(hexaColor: string): Theme {
     return createMuiTheme({
         palette: {
+            type: "dark",
             primary: {
                 main: hexaColor,
+            },
+        },
+        overrides: {
+            MuiFormControlLabel: {
+                label: {
+                    color: hexaColor,
+                },
             },
         },
     });

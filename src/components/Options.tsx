@@ -31,6 +31,7 @@ export default function Options({ game }: Props): JSX.Element {
             </Typography>
             <br />
             <FormControlLabel
+                label="Activer les sons"
                 control={
                     <Checkbox
                         checked={!globalMute}
@@ -42,7 +43,6 @@ export default function Options({ game }: Props): JSX.Element {
                         color="primary"
                     />
                 }
-                label="Activer les sons"
             />
 
             <Br count={3} />

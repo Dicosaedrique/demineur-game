@@ -36,7 +36,7 @@ export default function DifficultySelector({ game }: Props): JSX.Element {
     const onChangeWidth = (evt: React.ChangeEvent<HTMLInputElement>): void => {
         const numberValue = Number(evt.target.value);
 
-        if (!isNaN(numberValue) && numberValue > 0) {
+        if (!isNaN(numberValue) && numberValue > 0 && numberValue <= 100) {
             setWidth(numberValue);
 
             SettingsManager.getInstance().getUserPreset().width = numberValue;
