@@ -21,7 +21,8 @@ import {
     PointLight,
 } from "three";
 
-import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { OrbitControls } from "../scripts/OrbitControls";
+
 
 import { CELL_SIZE, CELL_SPACING, CONTROLS_TYPE } from "src/scripts/constants";
 

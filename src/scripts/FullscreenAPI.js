@@ -41,12 +41,13 @@ export function setFullScreen(fullScreen, callback) {
 
         promise
             .then(err => {
-                if (err) callback(err);
-                else callback();
+                if (callback) {
+                    callback(err);
+                }
             })
-            .catch(err => callback(err));
+            .catch(err => {if(callback) callback(err)});
     } catch (err) {
         console.log(err);
-        callback(err);
+        if(callback) callback(err);
     }
 }
